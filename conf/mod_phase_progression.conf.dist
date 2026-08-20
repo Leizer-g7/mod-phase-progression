@@ -1,0 +1,198 @@
+############################################
+# PHASE PROGRESSION
+############################################
+
+Progression.Enable = 1
+
+#
+# Fase inicial utilizada cuando todavía no existe
+# estado persistido en la base de datos.
+#
+# Valores válidos:
+# 20, 30, 40, 50, 60, 70, 80
+#
+
+Progression.ActivePhase = 20
+
+#
+# Permitir bajar una fase.
+# PRODUCCIÓN: dejar en 0
+#
+
+Progression.AllowPhaseRollback = 0
+
+#
+# Permitir que personajes GM ignoren caps.
+#
+
+Progression.GMBypass = 1
+
+
+############################################
+# PHASE 20
+############################################
+
+Progression.Phase20.MaxPlayerLevel = 20
+Progression.Phase20.RandomBotMaxLevel = 20
+
+Progression.Phase20.BotDistribution = "1-9:15,10-19:50,20:35"
+
+Progression.Phase20.BotGearMaxItemLevel = 25
+
+Progression.Phase20.Profession.Crafting = 150
+Progression.Phase20.Profession.Gathering = 150
+Progression.Phase20.Profession.Secondary = 150
+Progression.Phase20.Profession.Riding = 75
+
+Progression.Phase20.Outland = 0
+Progression.Phase20.Northrend = 0
+Progression.Phase20.DeathKnight = 0
+
+
+############################################
+# PHASE 30
+############################################
+
+Progression.Phase30.MaxPlayerLevel = 30
+Progression.Phase30.RandomBotMaxLevel = 30
+
+Progression.Phase30.BotDistribution = "1-9:10,10-19:15,20-29:45,30:30"
+
+Progression.Phase30.BotGearMaxItemLevel = 35
+
+Progression.Phase30.Profession.Crafting = 225
+Progression.Phase30.Profession.Gathering = 225
+Progression.Phase30.Profession.Secondary = 225
+Progression.Phase30.Profession.Riding = 75
+
+Progression.Phase30.Outland = 0
+Progression.Phase30.Northrend = 0
+Progression.Phase30.DeathKnight = 0
+
+
+############################################
+# PHASE 40
+############################################
+
+Progression.Phase40.MaxPlayerLevel = 40
+Progression.Phase40.RandomBotMaxLevel = 40
+
+Progression.Phase40.BotDistribution = "1-9:8,10-19:10,20-29:15,30-39:42,40:25"
+
+Progression.Phase40.BotGearMaxItemLevel = 45
+
+Progression.Phase40.Profession.Crafting = 300
+Progression.Phase40.Profession.Gathering = 300
+Progression.Phase40.Profession.Secondary = 300
+Progression.Phase40.Profession.Riding = 150
+
+Progression.Phase40.Outland = 0
+Progression.Phase40.Northrend = 0
+Progression.Phase40.DeathKnight = 0
+
+
+############################################
+# PHASE 50
+############################################
+
+Progression.Phase50.MaxPlayerLevel = 50
+Progression.Phase50.RandomBotMaxLevel = 50
+
+Progression.Phase50.BotDistribution = "1-9:6,10-19:8,20-29:10,30-39:12,40-49:40,50:24"
+
+Progression.Phase50.BotGearMaxItemLevel = 55
+
+Progression.Phase50.Profession.Crafting = 300
+Progression.Phase50.Profession.Gathering = 300
+Progression.Phase50.Profession.Secondary = 300
+Progression.Phase50.Profession.Riding = 150
+
+Progression.Phase50.Outland = 0
+Progression.Phase50.Northrend = 0
+Progression.Phase50.DeathKnight = 0
+
+
+############################################
+# PHASE 60
+############################################
+
+Progression.Phase60.MaxPlayerLevel = 60
+Progression.Phase60.RandomBotMaxLevel = 60
+
+Progression.Phase60.BotDistribution = "1-9:5,10-19:7,20-29:8,30-39:10,40-49:12,50-59:38,60:20"
+
+Progression.Phase60.BotGearMaxItemLevel = 78
+
+Progression.Phase60.Profession.Crafting = 300
+Progression.Phase60.Profession.Gathering = 300
+Progression.Phase60.Profession.Secondary = 300
+Progression.Phase60.Profession.Riding = 150
+
+Progression.Phase60.Outland = 0
+Progression.Phase60.Northrend = 0
+Progression.Phase60.DeathKnight = 0
+
+
+############################################
+# PHASE 70
+############################################
+
+Progression.Phase70.MaxPlayerLevel = 70
+Progression.Phase70.RandomBotMaxLevel = 70
+
+Progression.Phase70.BotDistribution = "1-9:4,10-19:5,20-29:6,30-39:7,40-49:8,50-59:10,60-69:40,70:20"
+
+Progression.Phase70.BotGearMaxItemLevel = 125
+
+Progression.Phase70.Profession.Crafting = 375
+Progression.Phase70.Profession.Gathering = 375
+Progression.Phase70.Profession.Secondary = 375
+Progression.Phase70.Profession.Riding = 300
+
+Progression.Phase70.Outland = 1
+Progression.Phase70.Northrend = 0
+Progression.Phase70.DeathKnight = 0
+
+
+############################################
+# PHASE 80
+############################################
+
+Progression.Phase80.MaxPlayerLevel = 80
+Progression.Phase80.RandomBotMaxLevel = 80
+
+Progression.Phase80.BotDistribution = "1-9:3,10-19:4,20-29:5,30-39:6,40-49:7,50-59:8,60-69:10,70-79:37,80:20"
+
+Progression.Phase80.BotGearMaxItemLevel = 224
+
+Progression.Phase80.Profession.Crafting = 450
+Progression.Phase80.Profession.Gathering = 450
+Progression.Phase80.Profession.Secondary = 450
+Progression.Phase80.Profession.Riding = 300
+
+Progression.Phase80.Outland = 1
+Progression.Phase80.Northrend = 1
+Progression.Phase80.DeathKnight = 1
+
+#
+# BATTLEGROUND PHASE AUTOMATION
+#
+
+# Permite que mod-phase-progression controle el auto-join de BGs.
+Progression.Battlegrounds.Enabled = 1
+
+# Actualmente soportado:
+# CURRENT_AND_PREVIOUS
+Progression.Battlegrounds.Policy = CURRENT_AND_PREVIOUS
+
+# Máximo de batallas automáticas por cada bracket configurado.
+Progression.Battlegrounds.InstancesPerBracket = 1
+
+#
+# LFG / DUNGEON AUTOMATION
+#
+
+# Los randombots pueden utilizar Dungeon Finder.
+# AzerothCore decide las mazmorras disponibles según
+# los requisitos normales de nivel.
+Progression.LFG.Enabled = 1

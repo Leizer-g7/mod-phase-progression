@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS `phase_progression_state` (
+    `id` TINYINT UNSIGNED NOT NULL,
+    `active_phase` TINYINT UNSIGNED NOT NULL DEFAULT 20,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `phase_progression_state` (`id`, `active_phase`)
+VALUES (1, 20)
+ON DUPLICATE KEY UPDATE `id` = `id`;
