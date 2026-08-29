@@ -15,6 +15,14 @@ Progression.Enable = 1
 Progression.ActivePhase = 20
 
 #
+# Estado histórico/content tier global.
+# Se persiste en phase_progression_state.
+# Rango global: 0..18
+#
+
+Progression.ActiveContentStage = 0
+
+#
 # Permitir bajar una fase.
 # PRODUCCIÓN: dejar en 0
 #
@@ -38,6 +46,10 @@ Progression.Phase20.RandomBotMaxLevel = 20
 Progression.Phase20.BotDistribution = "1-9:15,10-19:50,20:35"
 
 Progression.Phase20.BotGearMaxItemLevel = 25
+Progression.Phase20.AuctionMaterialMaxItemLevel = 20
+
+Progression.Phase20.ContentStage.Min = 0
+Progression.Phase20.ContentStage.Max = 0
 
 Progression.Phase20.Profession.Crafting = 150
 Progression.Phase20.Profession.Gathering = 150
@@ -59,6 +71,10 @@ Progression.Phase30.RandomBotMaxLevel = 30
 Progression.Phase30.BotDistribution = "1-9:10,10-19:15,20-29:45,30:30"
 
 Progression.Phase30.BotGearMaxItemLevel = 35
+Progression.Phase30.AuctionMaterialMaxItemLevel = 30
+
+Progression.Phase30.ContentStage.Min = 0
+Progression.Phase30.ContentStage.Max = 0
 
 Progression.Phase30.Profession.Crafting = 225
 Progression.Phase30.Profession.Gathering = 225
@@ -80,6 +96,10 @@ Progression.Phase40.RandomBotMaxLevel = 40
 Progression.Phase40.BotDistribution = "1-9:8,10-19:10,20-29:15,30-39:42,40:25"
 
 Progression.Phase40.BotGearMaxItemLevel = 45
+Progression.Phase40.AuctionMaterialMaxItemLevel = 40
+
+Progression.Phase40.ContentStage.Min = 0
+Progression.Phase40.ContentStage.Max = 0
 
 Progression.Phase40.Profession.Crafting = 300
 Progression.Phase40.Profession.Gathering = 300
@@ -101,6 +121,10 @@ Progression.Phase50.RandomBotMaxLevel = 50
 Progression.Phase50.BotDistribution = "1-9:6,10-19:8,20-29:10,30-39:12,40-49:40,50:24"
 
 Progression.Phase50.BotGearMaxItemLevel = 55
+Progression.Phase50.AuctionMaterialMaxItemLevel = 50
+
+Progression.Phase50.ContentStage.Min = 0
+Progression.Phase50.ContentStage.Max = 0
 
 Progression.Phase50.Profession.Crafting = 300
 Progression.Phase50.Profession.Gathering = 300
@@ -122,6 +146,10 @@ Progression.Phase60.RandomBotMaxLevel = 60
 Progression.Phase60.BotDistribution = "1-9:5,10-19:7,20-29:8,30-39:10,40-49:12,50-59:38,60:20"
 
 Progression.Phase60.BotGearMaxItemLevel = 78
+Progression.Phase60.AuctionMaterialMaxItemLevel = 55
+
+Progression.Phase60.ContentStage.Min = 0
+Progression.Phase60.ContentStage.Max = 8
 
 Progression.Phase60.Profession.Crafting = 300
 Progression.Phase60.Profession.Gathering = 300
@@ -143,6 +171,10 @@ Progression.Phase70.RandomBotMaxLevel = 70
 Progression.Phase70.BotDistribution = "1-9:4,10-19:5,20-29:6,30-39:7,40-49:8,50-59:10,60-69:40,70:20"
 
 Progression.Phase70.BotGearMaxItemLevel = 125
+Progression.Phase70.AuctionMaterialMaxItemLevel = 70
+
+Progression.Phase70.ContentStage.Min = 8
+Progression.Phase70.ContentStage.Max = 13
 
 Progression.Phase70.Profession.Crafting = 375
 Progression.Phase70.Profession.Gathering = 375
@@ -164,6 +196,10 @@ Progression.Phase80.RandomBotMaxLevel = 80
 Progression.Phase80.BotDistribution = "1-9:3,10-19:4,20-29:5,30-39:6,40-49:7,50-59:8,60-69:10,70-79:37,80:20"
 
 Progression.Phase80.BotGearMaxItemLevel = 224
+Progression.Phase80.AuctionMaterialMaxItemLevel = 999
+
+Progression.Phase80.ContentStage.Min = 13
+Progression.Phase80.ContentStage.Max = 18
 
 Progression.Phase80.Profession.Crafting = 450
 Progression.Phase80.Profession.Gathering = 450

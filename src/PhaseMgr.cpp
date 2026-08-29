@@ -31,6 +31,59 @@ void PhaseMgr::LoadPhase(
 
     def.phase = phase;
 
+    std::uint8_t defaultContentMin = 0;
+    std::uint8_t defaultContentMax = 0;
+
+    switch (phase)
+    {
+        case 60:
+            defaultContentMin = 0;
+            defaultContentMax = 8;
+            break;
+
+        case 70:
+            defaultContentMin = 8;
+            defaultContentMax = 13;
+            break;
+
+        case 80:
+            defaultContentMin = 13;
+            defaultContentMax = 18;
+            break;
+
+        default:
+            defaultContentMin = 0;
+            defaultContentMax = 0;
+            break;
+    }
+
+    def.contentStageMin = static_cast<std::uint8_t>(
+        sConfigMgr->GetOption<std::uint32_t>(
+            prefix + "ContentStage.Min",
+            defaultContentMin));
+
+    def.contentStageMax = static_cast<std::uint8_t>(
+        sConfigMgr->GetOption<std::uint32_t>(
+            prefix + "ContentStage.Max",
+            defaultContentMax));
+
+    if (def.contentStageMin > def.contentStageMax ||
+        def.contentStageMax > 18)
+    {
+        LOG_ERROR(
+            "module",
+            "PhaseProgression: rango ContentStage inválido "
+            "para Phase={}. Configurado {}..{}, usando {}..{}.",
+            static_cast<unsigned>(phase),
+            static_cast<unsigned>(def.contentStageMin),
+            static_cast<unsigned>(def.contentStageMax),
+            static_cast<unsigned>(defaultContentMin),
+            static_cast<unsigned>(defaultContentMax));
+
+        def.contentStageMin = defaultContentMin;
+        def.contentStageMax = defaultContentMax;
+    }
+
     def.maxPlayerLevel = static_cast<std::uint8_t>(
         sConfigMgr->GetOption<std::uint32_t>(
             prefix + "MaxPlayerLevel",
@@ -50,6 +103,19 @@ void PhaseMgr::LoadPhase(
         sConfigMgr->GetOption<std::uint32_t>(
             prefix + "BotGearMaxItemLevel",
             defaultGear);
+
+    /*
+     * Límite exclusivo para materias primas publicadas
+     * por AuctionHouseBot.
+     *
+     * El default es el nivel de la fase, pero cada fase
+     * puede configurarlo independientemente.
+     */
+    def.auctionMaterialMaxItemLevel =
+        sConfigMgr->GetOption<std::uint32_t>(
+            prefix + "AuctionMaterialMaxItemLevel",
+            defaultLevel);
+
 
     def.craftingCap = static_cast<std::uint16_t>(
         sConfigMgr->GetOption<std::uint32_t>(
@@ -111,6 +177,11 @@ void PhaseMgr::LoadConfig()
             "Progression.ActivePhase",
             20));
 
+    _defaultContentStage = static_cast<std::uint8_t>(
+        sConfigMgr->GetOption<std::uint32_t>(
+            "Progression.ActiveContentStage",
+            0));
+
     _phases.clear();
 
     LoadPhase(20, 20, 25, 150, 150, 150, 75, false, false, false,
@@ -144,37 +215,72 @@ void PhaseMgr::LoadConfig()
         _defaultPhase = 20;
     }
 
+    if (!IsValidContentStageForPhase(
+            _defaultPhase,
+            _defaultContentStage))
+    {
+        PhaseDefinition const& def =
+            GetDefinition(_defaultPhase);
+
+        LOG_ERROR(
+            "module",
+            "PhaseProgression: Progression.ActiveContentStage={} "
+            "no es válido para Phase={}. Se usará {}.",
+            static_cast<unsigned>(_defaultContentStage),
+            static_cast<unsigned>(_defaultPhase),
+            static_cast<unsigned>(def.contentStageMin));
+
+        _defaultContentStage = def.contentStageMin;
+    }
+
     if (!IsValidPhase(_activePhase))
         _activePhase = _defaultPhase;
 
+    if (!IsValidContentStageForPhase(
+            _activePhase,
+            _activeContentStage))
+    {
+        _activeContentStage =
+            GetDefinition(_activePhase).contentStageMin;
+    }
+
     LOG_INFO(
         "module",
-        "PhaseProgression: configuración cargada. Fase por defecto={}.",
-        static_cast<unsigned>(_defaultPhase));
+        "PhaseProgression: configuración cargada. "
+        "Fase por defecto={}, ContentStage por defecto={}.",
+        static_cast<unsigned>(_defaultPhase),
+        static_cast<unsigned>(_defaultContentStage));
 }
 
 void PhaseMgr::LoadState()
 {
     QueryResult result =
         WorldDatabase.Query(
-            "SELECT `active_phase` "
+            "SELECT `active_phase`, `active_content_stage` "
             "FROM `phase_progression_state` "
             "WHERE `id` = 1");
 
     if (!result)
     {
         _activePhase = _defaultPhase;
+        _activeContentStage = _defaultContentStage;
 
         WorldDatabase.Execute(
             "INSERT INTO `phase_progression_state` "
-            "(`id`, `active_phase`) VALUES (1, {}) "
-            "ON DUPLICATE KEY UPDATE `active_phase` = VALUES(`active_phase`)",
-            static_cast<std::uint32_t>(_activePhase));
+            "(`id`, `active_phase`, `active_content_stage`) "
+            "VALUES (1, {}, {}) "
+            "ON DUPLICATE KEY UPDATE "
+            "`active_phase` = VALUES(`active_phase`), "
+            "`active_content_stage` = VALUES(`active_content_stage`)",
+            static_cast<std::uint32_t>(_activePhase),
+            static_cast<std::uint32_t>(_activeContentStage));
 
         LOG_INFO(
             "module",
-            "PhaseProgression: sin estado persistido. Usando fase {}.",
-            static_cast<unsigned>(_activePhase));
+            "PhaseProgression: sin estado persistido. "
+            "Usando Phase={}, ContentStage={}.",
+            static_cast<unsigned>(_activePhase),
+            static_cast<unsigned>(_activeContentStage));
 
         return;
     }
@@ -183,6 +289,9 @@ void PhaseMgr::LoadState()
 
     std::uint8_t dbPhase =
         fields[0].Get<std::uint8_t>();
+
+    std::uint8_t dbContentStage =
+        fields[1].Get<std::uint8_t>();
 
     if (!IsValidPhase(dbPhase))
     {
@@ -198,16 +307,51 @@ void PhaseMgr::LoadState()
 
     _activePhase = dbPhase;
 
+    if (!IsValidContentStageForPhase(
+            dbPhase,
+            dbContentStage))
+    {
+        _activeContentStage =
+            GetDefinition(dbPhase).contentStageMin;
+
+        LOG_ERROR(
+            "module",
+            "PhaseProgression: ContentStage={} inválido "
+            "para Phase={}. Se usará {}.",
+            static_cast<unsigned>(dbContentStage),
+            static_cast<unsigned>(dbPhase),
+            static_cast<unsigned>(_activeContentStage));
+
+        WorldDatabase.Execute(
+            "UPDATE `phase_progression_state` "
+            "SET `active_content_stage` = {} "
+            "WHERE `id` = 1",
+            static_cast<std::uint32_t>(_activeContentStage));
+    }
+    else
+    {
+        _activeContentStage = dbContentStage;
+    }
+
     LOG_INFO(
         "module",
-        "PhaseProgression: fase activa cargada desde DB: {}.",
-        static_cast<unsigned>(_activePhase));
+        "PhaseProgression: estado cargado desde DB. "
+        "Phase={}, ContentStage={}.",
+        static_cast<unsigned>(_activePhase),
+        static_cast<unsigned>(_activeContentStage));
 }
 
 bool PhaseMgr::SetActivePhase(std::uint8_t phase)
 {
     if (!IsValidPhase(phase))
         return false;
+
+    if (!IsValidContentStageForPhase(
+            phase,
+            _activeContentStage))
+    {
+        return false;
+    }
 
     if (!_allowRollback && phase < _activePhase)
         return false;
@@ -228,9 +372,54 @@ bool PhaseMgr::SetActivePhase(std::uint8_t phase)
     return true;
 }
 
+bool PhaseMgr::SetActiveContentStage(std::uint8_t stage)
+{
+    if (!IsValidContentStageForPhase(
+            _activePhase,
+            stage))
+    {
+        return false;
+    }
+
+    if (!_allowRollback && stage < _activeContentStage)
+        return false;
+
+    _activeContentStage = stage;
+
+    WorldDatabase.Execute(
+        "INSERT INTO `phase_progression_state` "
+        "(`id`, `active_phase`, `active_content_stage`) "
+        "VALUES (1, {}, {}) "
+        "ON DUPLICATE KEY UPDATE "
+        "`active_content_stage` = VALUES(`active_content_stage`)",
+        static_cast<std::uint32_t>(_activePhase),
+        static_cast<std::uint32_t>(_activeContentStage));
+
+    LOG_INFO(
+        "module",
+        "PhaseProgression: nuevo ContentStage activo: {}.",
+        static_cast<unsigned>(_activeContentStage));
+
+    return true;
+}
+
 bool PhaseMgr::IsValidPhase(std::uint8_t phase) const
 {
     return _phases.find(phase) != _phases.end();
+}
+
+bool PhaseMgr::IsValidContentStageForPhase(
+    std::uint8_t phase,
+    std::uint8_t stage) const
+{
+    if (!IsValidPhase(phase))
+        return false;
+
+    PhaseDefinition const& def =
+        GetDefinition(phase);
+
+    return stage >= def.contentStageMin &&
+           stage <= def.contentStageMax;
 }
 
 PhaseDefinition const& PhaseMgr::GetActiveDefinition() const
@@ -247,6 +436,11 @@ PhaseDefinition const& PhaseMgr::GetDefinition(
 std::uint8_t PhaseMgr::GetActivePhase() const
 {
     return _activePhase;
+}
+
+std::uint8_t PhaseMgr::GetActiveContentStage() const
+{
+    return _activeContentStage;
 }
 
 std::uint8_t PhaseMgr::GetMaxPlayerLevel() const

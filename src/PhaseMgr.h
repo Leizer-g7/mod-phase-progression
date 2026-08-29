@@ -9,10 +9,20 @@ struct PhaseDefinition
 {
     std::uint8_t phase = 20;
 
+    // Rango de contenido histórico permitido mientras esta
+    // fase de nivel está activa.
+    std::uint8_t contentStageMin = 0;
+    std::uint8_t contentStageMax = 0;
+
     std::uint8_t maxPlayerLevel = 20;
     std::uint8_t randomBotMaxLevel = 20;
 
     std::uint32_t botGearMaxItemLevel = 25;
+
+    // Límite económico usado exclusivamente por AHBot
+    // para materias primas. No afecta al gear de Playerbots.
+    std::uint32_t auctionMaterialMaxItemLevel = 20;
+
     std::string botDistribution;
 
     std::uint16_t craftingCap = 150;
@@ -34,12 +44,18 @@ public:
     void LoadState();
 
     bool SetActivePhase(std::uint8_t phase);
+    bool SetActiveContentStage(std::uint8_t stage);
+
     bool IsValidPhase(std::uint8_t phase) const;
+    bool IsValidContentStageForPhase(
+        std::uint8_t phase,
+        std::uint8_t stage) const;
 
     PhaseDefinition const& GetActiveDefinition() const;
     PhaseDefinition const& GetDefinition(std::uint8_t phase) const;
 
     std::uint8_t GetActivePhase() const;
+    std::uint8_t GetActiveContentStage() const;
     std::uint8_t GetMaxPlayerLevel() const;
     std::uint8_t GetRandomBotMaxLevel() const;
 
@@ -70,7 +86,10 @@ private:
     bool _gmBypass = true;
 
     std::uint8_t _defaultPhase = 20;
+    std::uint8_t _defaultContentStage = 0;
+
     std::uint8_t _activePhase = 20;
+    std::uint8_t _activeContentStage = 0;
 
     std::map<std::uint8_t, PhaseDefinition> _phases;
 };

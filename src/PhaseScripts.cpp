@@ -8,9 +8,11 @@
 #include "Chat.h"
 #include "Config.h"
 #include "Log.h"
+#include "MapMgr.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
+#include "World.h"
 
 #include <algorithm>
 
@@ -395,9 +397,10 @@ public:
     {
         static ChatCommandTable progressionTable =
         {
-            { "status", HandleStatusCommand, SEC_GAMEMASTER, Console::Yes },
-            { "phase",  HandlePhaseCommand,  SEC_ADMINISTRATOR, Console::Yes },
-            { "reload", HandleReloadCommand, SEC_ADMINISTRATOR, Console::Yes },
+            { "status",  HandleStatusCommand,  SEC_GAMEMASTER, Console::Yes },
+            { "phase",   HandlePhaseCommand,   SEC_ADMINISTRATOR, Console::Yes },
+            { "content", HandleContentCommand, SEC_ADMINISTRATOR, Console::Yes },
+            { "reload",  HandleReloadCommand,  SEC_ADMINISTRATOR, Console::Yes },
         };
 
         static ChatCommandTable commandTable =
@@ -418,6 +421,19 @@ public:
 
         handler->PSendSysMessage(
             "Active Phase: {}", static_cast<uint32>(def.phase));
+
+        handler->PSendSysMessage(
+            "Content Stage: {} (allowed {}..{})",
+            static_cast<uint32>(
+                sPhaseMgr.GetActiveContentStage()),
+            static_cast<uint32>(def.contentStageMin),
+            static_cast<uint32>(def.contentStageMax));
+
+        handler->PSendSysMessage(
+            "Rollback: {}",
+            sPhaseMgr.IsRollbackEnabled()
+                ? "ENABLED"
+                : "DISABLED");
 
         handler->PSendSysMessage(
             "Player Max Level: {}", static_cast<uint32>(def.maxPlayerLevel));
@@ -560,7 +576,7 @@ public:
         if (requestedPhase > 255)
         {
             handler->SendSysMessage("Invalid phase.");
-            return false;
+            return true;
         }
 
         uint8 newPhase =
@@ -571,7 +587,30 @@ public:
             handler->SendSysMessage(
                 "Valid phases: 20, 30, 40, 50, 60, 70, 80.");
 
-            return false;
+            return true;
+        }
+
+        uint8 currentContentStage =
+            sPhaseMgr.GetActiveContentStage();
+
+        if (!sPhaseMgr.IsValidContentStageForPhase(
+                newPhase,
+                currentContentStage))
+        {
+            PhaseDefinition const& requestedDefinition =
+                sPhaseMgr.GetDefinition(newPhase);
+
+            handler->PSendSysMessage(
+                "Phase {} does not accept current ContentStage {}. "
+                "Allowed range is {}..{}.",
+                static_cast<uint32>(newPhase),
+                static_cast<uint32>(currentContentStage),
+                static_cast<uint32>(
+                    requestedDefinition.contentStageMin),
+                static_cast<uint32>(
+                    requestedDefinition.contentStageMax));
+
+            return true;
         }
 
         uint8 oldPhase =
@@ -585,7 +624,7 @@ public:
                 static_cast<uint32>(oldPhase),
                 static_cast<uint32>(newPhase));
 
-            return false;
+            return true;
         }
 
         if (newPhase == oldPhase)
@@ -626,7 +665,7 @@ public:
                 static_cast<uint32>(newPhase),
                 runtimeError);
 
-            return false;
+            return true;
         }
 
         /*
@@ -645,7 +684,7 @@ public:
                 "Unable to persist progression phase. "
                 "Previous runtime restored.");
 
-            return false;
+            return true;
         }
 
         handler->PSendSysMessage(
@@ -656,31 +695,124 @@ public:
         return true;
     }
 
-    static bool HandleReloadCommand(ChatHandler* handler)
+    static bool HandleContentCommand(
+        ChatHandler* handler,
+        uint32 requestedStage)
     {
-        sPhaseMgr.LoadConfig();
-        sPhaseMgr.LoadState();
+        if (requestedStage > 18)
+        {
+            handler->SendSysMessage(
+                "Invalid ContentStage. Valid global range: 0..18.");
 
-        std::string playerbotsError;
+            return true;
+        }
 
-        if (!ApplyProgressionRuntime(
-                sPhaseMgr.GetActiveDefinition(),
-                playerbotsError))
+        uint8 newStage =
+            static_cast<uint8>(requestedStage);
+
+        uint8 oldStage =
+            sPhaseMgr.GetActiveContentStage();
+
+        PhaseDefinition const& def =
+            sPhaseMgr.GetActiveDefinition();
+
+        if (!sPhaseMgr.IsValidContentStageForPhase(
+                def.phase,
+                newStage))
         {
             handler->PSendSysMessage(
-                "Progression reloaded, but Playerbots "
-                "could not be applied: {}",
-                playerbotsError);
+                "ContentStage {} is invalid for Phase {}. "
+                "Allowed range is {}..{}.",
+                static_cast<uint32>(newStage),
+                static_cast<uint32>(def.phase),
+                static_cast<uint32>(def.contentStageMin),
+                static_cast<uint32>(def.contentStageMax));
 
-            return false;
+            return true;
+        }
+
+        if (newStage < oldStage &&
+            !sPhaseMgr.IsRollbackEnabled())
+        {
+            handler->PSendSysMessage(
+                "Content rollback is disabled. Current={}, requested={}.",
+                static_cast<uint32>(oldStage),
+                static_cast<uint32>(newStage));
+
+            return true;
+        }
+
+        if (newStage == oldStage)
+        {
+            handler->PSendSysMessage(
+                "ContentStage {} is already active.",
+                static_cast<uint32>(newStage));
+
+            return true;
+        }
+
+        if (!sPhaseMgr.SetActiveContentStage(newStage))
+        {
+            handler->SendSysMessage(
+                "Unable to persist ContentStage.");
+
+            return true;
         }
 
         handler->PSendSysMessage(
-            "Phase progression reloaded. Active phase={}.",
-            static_cast<uint32>(sPhaseMgr.GetActivePhase()));
+            "ContentStage changed: {} -> {}.",
+            static_cast<uint32>(oldStage),
+            static_cast<uint32>(newStage));
 
         return true;
     }
+
+    static bool HandleReloadCommand(ChatHandler* handler)
+    {
+        LOG_INFO(
+            "module",
+            "PhaseProgression: administrative configuration "
+            "reload requested.");
+
+        /*
+         * Recarga real de worldserver.conf + configuraciones
+         * de módulos.
+         *
+         * Esto dispara OnAfterConfigLoad(true), donde
+         * PhaseProgression vuelve a ejecutar LoadConfig()
+         * y LoadState().
+         *
+         * El runtime de Playerbots/BG/LFG se reaplica en el
+         * siguiente world tick para evitar depender del orden
+         * de los WorldScripts durante el reload.
+         */
+        sWorld->LoadConfigSettings(true);
+
+        /*
+         * Igual que el comando oficial .reload config:
+         * refrescar también las distancias de visibilidad
+         * dependientes de configuración.
+         */
+        sMapMgr->InitializeVisibilityDistanceInfo();
+
+        handler->PSendSysMessage(
+            "Configuration reloaded. "
+            "Active phase={}, ContentStage={}, Rollback={}.",
+            static_cast<uint32>(
+                sPhaseMgr.GetActivePhase()),
+            static_cast<uint32>(
+                sPhaseMgr.GetActiveContentStage()),
+            sPhaseMgr.IsRollbackEnabled()
+                ? "ENABLED"
+                : "DISABLED");
+
+        handler->SendSysMessage(
+            "Progression runtime will be reapplied "
+            "on the next world tick.");
+
+        return true;
+    }
+
 };
 
 void AddSC_phase_progression_scripts()
