@@ -10,6 +10,7 @@
 #include "Log.h"
 #include "MapMgr.h"
 #include "Player.h"
+#include "Pet.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "World.h"
@@ -257,7 +258,7 @@ public:
         Player* player,
         uint32& amount,
         Unit* /*victim*/,
-        uint8 /*xpSource*/) override
+        uint8 xpSource) override
     {
         if (!sPhaseMgr.IsEnabled() ||
             !player ||
@@ -266,8 +267,36 @@ public:
             return;
         }
 
-        if (player->GetLevel() >= sPhaseMgr.GetMaxPlayerLevel())
-            amount = 0;
+        uint8 const maxPlayerLevel =
+            sPhaseMgr.GetMaxPlayerLevel();
+
+        if (!amount ||
+            player->GetLevel() < maxPlayerLevel)
+        {
+            return;
+        }
+
+        /*
+         * KillRewarder passes the same XP value to the player's pet
+         * after OnPlayerGiveXP(). Because the global phase cap sets
+         * player XP to zero here, preserve the pet reward first.
+         *
+         * This mirrors AzerothCore's normal rule:
+         *   solo  -> 100%
+         *   group -> 50%
+         */
+        if (xpSource == PlayerXPSource::XPSOURCE_KILL)
+        {
+            if (Pet* pet = player->GetPet())
+            {
+                pet->GivePetXP(
+                    player->GetGroup()
+                        ? amount / 2
+                        : amount);
+            }
+        }
+
+        amount = 0;
     }
 
     void OnPlayerGetMaxSkillValue(
