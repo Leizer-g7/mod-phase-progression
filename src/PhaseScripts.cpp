@@ -11,6 +11,7 @@
 #include "MapMgr.h"
 #include "Player.h"
 #include "Pet.h"
+#include "QuestDef.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "World.h"
@@ -297,6 +298,49 @@ public:
         }
 
         amount = 0;
+    }
+
+    bool OnPlayerShouldBeRewardedWithMoneyInsteadOfExp(
+        Player* player) override
+    {
+        if (!sPhaseMgr.IsEnabled() ||
+            !player ||
+            IsPhaseBypassed(player))
+        {
+            return false;
+        }
+
+        return player->GetLevel() >=
+            sPhaseMgr.GetMaxPlayerLevel();
+    }
+
+    void OnPlayerQuestComputeMaxLevelMoney(
+        Player* player,
+        Quest const* quest,
+        uint32& moneyValue) override
+    {
+        if (!sPhaseMgr.IsEnabled() ||
+            !player ||
+            !quest ||
+            IsPhaseBypassed(player) ||
+            player->GetLevel() < sPhaseMgr.GetMaxPlayerLevel())
+        {
+            return;
+        }
+
+        if (quest->HasFlag(QUEST_FLAGS_NO_MONEY_FROM_XP))
+        {
+            moneyValue = 0;
+            return;
+        }
+
+        uint32 const xpValue =
+            quest->XPValue(
+                sPhaseMgr.GetMaxPlayerLevel());
+
+        moneyValue = static_cast<uint32>(
+            (xpValue * (6 * COPPER)) *
+            sWorld->getRate(RATE_REWARD_BONUS_MONEY));
     }
 
     void OnPlayerGetMaxSkillValue(
