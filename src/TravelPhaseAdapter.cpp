@@ -5,6 +5,7 @@
 #include "AreaDefines.h"
 #include "Chat.h"
 #include "Log.h"
+#include "Map.h"
 #include "MapMgr.h"
 #include "ObjectMgr.h"
 #include "Player.h"
@@ -16,6 +17,23 @@ namespace
 {
     constexpr std::uint32_t MAP_OUTLAND_ID = 530;
     constexpr std::uint32_t MAP_NORTHREND_ID = 571;
+
+    /*
+     * Naxxramas usa técnicamente Parent=571, pero Grim
+     * reutiliza map 533 para Naxx40 antes de WotLK.
+     *
+     * Por eso no puede heredarse automáticamente el gate
+     * global de Northrend.
+     */
+    constexpr std::uint32_t MAP_NAXXRAMAS_ID = 533;
+
+    /*
+     * Estas dos áreas son usadas por el gate histórico de
+     * Individual Progression para las zonas iniciales TBC,
+     * pero no existen actualmente en AreaDefines.h.
+     */
+    constexpr std::uint32_t AREA_VEILED_SEA_ID = 3479;
+    constexpr std::uint32_t AREA_AMMEN_VALE_ID = 3526;
 
     enum class TravelRestriction
     {
@@ -36,6 +54,8 @@ namespace
             case AREA_AZUREMYST_ISLE:
             case AREA_BLOODMYST_ISLE:
             case AREA_THE_EXODAR:
+            case AREA_AMMEN_VALE_ID:
+            case AREA_VEILED_SEA_ID:
                 return true;
 
             default:
@@ -49,6 +69,35 @@ namespace
                !sPhaseMgr.IsEnabled() ||
                (sPhaseMgr.IsGMBypassEnabled() &&
                 player->IsGameMaster());
+    }
+
+    std::uint32_t ResolveExpansionMapId(
+        std::uint32_t mapId)
+    {
+        /*
+         * Naxxramas es una excepción deliberada.
+         *
+         * Aunque instance_template.Parent sea Northrend,
+         * map 533 también representa Naxx40 dentro de Grim.
+         * Su disponibilidad histórica sigue perteneciendo
+         * a Individual Progression.
+         */
+        if (mapId == MAP_NAXXRAMAS_ID)
+            return mapId;
+
+        InstanceTemplate const* instanceTemplate =
+            sObjectMgr->GetInstanceTemplate(mapId);
+
+        if (!instanceTemplate)
+            return mapId;
+
+        if (instanceTemplate->Parent == MAP_OUTLAND_ID ||
+            instanceTemplate->Parent == MAP_NORTHREND_ID)
+        {
+            return instanceTemplate->Parent;
+        }
+
+        return mapId;
     }
 
     TravelRestriction GetRestriction(
@@ -65,46 +114,85 @@ namespace
             sPhaseMgr.GetActiveDefinition();
 
         /*
+         * Para una instancia de expansión utilizamos el Parent
+         * como autoridad global.
+         *
+         * Ejemplos:
+         *   Hellfire Ramparts 543 -> 530
+         *   Black Temple      564 -> 530
+         *   Utgarde Keep      574 -> 571
+         *   Ulduar            603 -> 571
+         *
+         * Naxxramas 533 queda excluido deliberadamente en
+         * ResolveExpansionMapId().
+         */
+        std::uint32_t const expansionMapId =
+            ResolveExpansionMapId(mapId);
+
+        /*
          * NORTHREND
          *
-         * 1. Debe estar abierto por fase.
-         * 2. El personaje debe ser nivel 68+.
+         * El continente y sus instancias obedecen la apertura
+         * global de Northrend.
+         *
+         * El requisito de nivel 68 pertenece únicamente al
+         * viaje directo al continente. Las instancias conservan
+         * sus propios requisitos de nivel del core/contenido.
          */
-        if (mapId == MAP_NORTHREND_ID)
+        if (expansionMapId == MAP_NORTHREND_ID)
         {
             if (!phase.northrendEnabled)
                 return TravelRestriction::NorthrendPhase;
 
-            if (player->GetLevel() < 68)
+            if (mapId == MAP_NORTHREND_ID &&
+                player->GetLevel() < 68)
+            {
                 return TravelRestriction::NorthrendLevel;
+            }
 
             return TravelRestriction::None;
         }
 
         /*
-         * OUTLAND / MAP 530
+         * OUTLAND / EXPANSIÓN TBC
          *
-         * Las zonas iniciales de Blood Elf y Draenei
-         * siempre permanecen accesibles.
+         * Las zonas iniciales Blood Elf/Draenei de map 530
+         * permanecen accesibles incluso antes de abrir Outland.
+         *
+         * Las instancias con Parent=530 no son starter zones y
+         * sí obedecen la disponibilidad global de la expansión.
          */
-        if (mapId == MAP_OUTLAND_ID)
+        if (expansionMapId == MAP_OUTLAND_ID)
         {
-            std::uint32_t zoneId =
-                sMapMgr->GetZoneId(
-                    player->GetPhaseMask(),
-                    mapId,
-                    x,
-                    y,
-                    z);
+            if (mapId == MAP_OUTLAND_ID)
+            {
+                std::uint32_t zoneId =
+                    sMapMgr->GetZoneId(
+                        player->GetPhaseMask(),
+                        mapId,
+                        x,
+                        y,
+                        z);
 
-            if (IsTbcStarterZone(zoneId))
-                return TravelRestriction::None;
+                if (IsTbcStarterZone(zoneId))
+                    return TravelRestriction::None;
+            }
 
             if (!phase.outlandEnabled)
                 return TravelRestriction::OutlandPhase;
 
-            if (player->GetLevel() < 58)
+            /*
+             * Igual que Northrend: el mínimo 58 es requisito
+             * del viaje directo a Outland, no del Parent de
+             * cada instancia TBC.
+             */
+            if (mapId == MAP_OUTLAND_ID &&
+                player->GetLevel() < 58)
+            {
                 return TravelRestriction::OutlandLevel;
+            }
+
+            return TravelRestriction::None;
         }
 
         return TravelRestriction::None;
