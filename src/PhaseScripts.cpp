@@ -156,7 +156,7 @@ public:
         PlayerbotsRuntimeState state =
             PlayerbotsPhaseAdapter::GetRuntimeState();
 
-        bool driftDetected =
+        bool playerbotsDriftDetected =
             state.maxLevel != phase.randomBotMaxLevel ||
             !state.bracketsEnabled ||
             state.randomGearMaxItemLevel !=
@@ -169,15 +169,62 @@ public:
             state.ignoreArenaTeamBots ||
             state.ignoreFriendListed;
 
-        if (!driftDetected)
+        /*
+         * LFG tiene dos estados runtime independientes:
+         *
+         * - LFGMgr::m_options para la disponibilidad real del RDF.
+         * - PlayerbotAIConfig::randomBotJoinLfg para los randombots.
+         *
+         * Ambos pueden sufrir drift después del startup.
+         */
+        LfgRuntimeState lfgState =
+            LfgPhaseAdapter::GetRuntimeState();
+
+        bool const expectedRdfEnabled =
+            sConfigMgr->GetOption<bool>(
+                "Progression.LFG.RandomDungeonFinder.Enabled",
+                true);
+
+        bool const expectedRandomBotJoinLfg =
+            sConfigMgr->GetOption<bool>(
+                "Progression.LFG.Enabled",
+                true) &&
+            expectedRdfEnabled;
+
+        bool lfgDriftDetected =
+            lfgState.randomDungeonFinderEnabled !=
+                expectedRdfEnabled ||
+            lfgState.randomBotJoinLfg !=
+                expectedRandomBotJoinLfg;
+
+        if (!playerbotsDriftDetected &&
+            !lfgDriftDetected)
+        {
             return;
+        }
 
         LOG_WARN(
             "module",
-            "PhaseProgression: runtime drift detectado en "
-            "Playerbots. Reaplicando Phase={}.",
+            "PhaseProgression: runtime drift detectado. "
+            "Phase={}, PlayerbotsDrift={}, LfgDrift={}, "
+            "RDF(actual/esperado)={}/{}, "
+            "RandomBotJoinLfg(actual/esperado)={}/{}.",
             static_cast<unsigned>(
-                sPhaseMgr.GetActivePhase()));
+                sPhaseMgr.GetActivePhase()),
+            playerbotsDriftDetected ? "YES" : "NO",
+            lfgDriftDetected ? "YES" : "NO",
+            lfgState.randomDungeonFinderEnabled
+                ? "ENABLED"
+                : "DISABLED",
+            expectedRdfEnabled
+                ? "ENABLED"
+                : "DISABLED",
+            lfgState.randomBotJoinLfg
+                ? "ENABLED"
+                : "DISABLED",
+            expectedRandomBotJoinLfg
+                ? "ENABLED"
+                : "DISABLED");
 
         std::string error;
 

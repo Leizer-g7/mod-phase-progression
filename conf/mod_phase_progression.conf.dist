@@ -232,3 +232,19 @@ Progression.Battlegrounds.InstancesPerBracket = 1
 # AzerothCore decide las mazmorras disponibles según
 # los requisitos normales de nivel.
 Progression.LFG.Enabled = 1
+
+#
+# Progression.LFG.RandomDungeonFinder.Enabled
+#
+# Control global del Random Dungeon Finder.
+#
+# PhaseMgr modifica únicamente el bit RDF de
+# DungeonFinder.OptionsMask y conserva las opciones
+# de Raid Browser y Seasonal Bosses configuradas
+# por AzerothCore.
+#
+# Default:
+#   1 - Random Dungeon Finder habilitado
+#   0 - Random Dungeon Finder deshabilitado
+#
+Progression.LFG.RandomDungeonFinder.Enabled = 1
